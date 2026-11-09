@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+{#
+  Plantilla para WeasyPrint: CSS de impresión moderno (CSS Paged Media).
+  Compárala con plantillas/wkhtmltopdf/factura.html:
+    - la paginación la hace el motor (thead repetido, filas que no se parten)
+    - pie y "Página X de Y" con @page + counter(page)/counter(pages)
+    - encabezado corrido en páginas 2+ con position: running()
+    - maquetado con flexbox/grid y variables CSS
+#}
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Factura {{ f.serie_folio }}</title>
+<meta name="author" content="{{ f.emisor.nombre }}">
+<meta name="description" content="Factura {{ f.serie_folio }} para {{ f.receptor.nombre }}">
+<meta name="generator" content="facturacion_pdf · {{ motor.descripcion }}">
+<style>
+  :root {
+    --primario: #1f4e79;
+    --primario-oscuro: #13304d;
+    --suave: #eef3f8;
+    --borde: #c9d2dc;
+    --linea: #e1e7ee;
+    --texto: #1d2733;
+    --tenue: #5b6878;
+    --ok: #2e7d4f; --warn: #b26a00; --bad: #b3261e;
+    --radio: 5px;
+  }
+
+  /* ---------- Página: tamaño, márgenes y cajas de margen ---------- */
+  @page {
+    size: Letter;
+    margin: 20mm 10mm 14mm 10mm;
+    @top-left   { content: element(encabezado); width: 100%; vertical-align: bottom; }
+    @bottom-left {
+      content: "Documento interno · no es un CFDI ni sustituye al comprobante timbrado";
+      font: 6.6pt "DejaVu Sans", sans-serif; color: #5b6878;
+    }
+    @bottom-right {
+      content: "Página " counter(page) " de " counter(pages);
+      font: 7pt "DejaVu Sans", sans-serif; color: #5b6878;
+    }
+  }
+  @page :first {
+    margin-top: 10mm;
+    @top-left { content: none; }          /* la primera página ya tiene el encabezado completo */
+  }
+
+  /* Encabezado corrido: sale del flujo y se dibuja en @top-left de las páginas 2+ */
+  .encabezado-corrido {
+    position: running(encabezado);
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 1px solid var(--borde); padding-bottom: 2mm;
+    font-size: 7.4pt; color: var(--tenue);
+  }
+  .encabezado-corrido b { color: var(--primario-oscuro); font-size: 9pt; }
+
+  /* ---------- Base ---------- */
+  * { box-sizing: border-box; }
+  /* WeasyPrint respeta las unidades reales (1pt = 1/72 in). wkhtmltopdf reduce todo ~80% ("smart shrinking"),
+     por eso aquí se usan tamaños menores y medidas en mm para obtener una densidad equivalente. */
+  html { font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; font-size: 7.2pt; color: var(--texto); line-height: 1.35; }
+  body { margin: 0; }
+  .tenue { color: var(--tenue); }
+  .peq { font-size: 6.4pt; }
+  .mono { font-family: "DejaVu Sans Mono", Consolas, monospace; }
+  .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .b { font-weight: bold; }
+  h2 { bookmark-level: 1; }            /* marcadores (índice) en el PDF */
+
+  /* ---------- Encabezado de la primera página ---------- */
+  .cabecera { display: flex; gap: 12px; align-items: flex-start; }
+  .logo { flex: 0 0 17mm; }
+  .logo img { max-width: 17mm; max-height: 17mm; }
+  .monograma { width: 15mm; height: 15mm; border-radius: 6px; background: var(--primario); color: #fff;
+               font-size: 17pt; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .emisor { flex: 1; }
+  .emisor .razon { font-size: 11pt; font-weight: bold; color: var(--primario-oscuro); margin-bottom: 3px; }
+  .emisor div { margin-bottom: 1px; }
+
+  .comprobante { flex: 0 0 62mm; border: 1.2px solid var(--primario); border-radius: var(--radio); overflow: hidden; }
+  .comprobante .tit { background: var(--primario); color: #fff; text-align: center; padding: 5px; font-weight: bold;
+                      letter-spacing: 2px; font-size: 9pt; }
+  .comprobante .folio { text-align: center; font-size: 13pt; font-weight: bold; color: var(--primario-oscuro); padding: 4px 0 2px; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; column-gap: 8px; row-gap: 1px; padding: 2px 8px; font-size: 6.8pt; }
+  .kv .k { color: var(--tenue); }
+  .uuid { padding: 3px 8px 6px; }
+  .estatus { display: inline-block; padding: 0 7px; border-radius: 9px; font-size: 7pt; font-weight: bold;
+             border: 1px solid #8a96a3; color: #3a4654; }
+  .estatus.ok { border-color: var(--ok); color: var(--ok); }
+  .estatus.warn { border-color: var(--warn); color: var(--warn); }
+  .estatus.bad { border-color: var(--bad); color: var(--bad); }
+
+  /* ---------- Paneles ---------- */
+  .fila { display: grid; grid-template-columns: 58fr 42fr; gap: 10px; margin-top: 9px; }
+  .panel { border: 1px solid var(--borde); border-radius: var(--radio); break-inside: avoid; }
+  .panel > h2, .panel > .ph { margin: 0; background: var(--suave); color: var(--primario-oscuro); font-size: 6.8pt;
+                letter-spacing: 1px; padding: 4px 8px; border-bottom: 1px solid var(--borde); text-transform: uppercase; }
+  .panel .kv { padding: 3px 8px 5px; font-size: 7.2pt; row-gap: 2px; }
+
+  /* ---------- Conceptos: el motor repite thead y no parte filas ---------- */
+  table { border-collapse: collapse; width: 100%; }
+  .conceptos { margin-top: 9px; table-layout: fixed; }   /* respeta los anchos; la descripción toma el resto */
+  .conceptos thead { display: table-header-group; }
+  .conceptos tr { break-inside: avoid; }
+  .conceptos th { background: var(--primario); color: #fff; font-size: 6.4pt; padding: 4px; text-align: left;
+                  text-transform: uppercase; letter-spacing: 0; }
+  .conceptos th.num { text-align: right; }
+  .conceptos td { padding: 2px 4px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+  .conceptos tbody tr:nth-child(even) td { background: #f7f9fb; }
+  .conceptos .desc { font-weight: bold; }
+  .conceptos .sub { color: var(--tenue); font-size: 6.2pt; }
+
+  /* ---------- Cierre: impuestos + totales (no se separan) ---------- */
+  .cierre { break-inside: avoid; }
+  .imp th { font-size: 7pt; color: var(--tenue); text-align: left; padding: 3px 8px; border-bottom: 1px solid var(--borde); }
+  .imp th.num { text-align: right; }
+  .imp td { padding: 3px 8px; }
+  .tot td { padding: 3px 8px; }
+  .tot tr.total td { background: var(--primario); color: #fff; font-weight: bold; font-size: 9pt; padding: 6px 8px; }
+  .letra { margin-top: 7px; padding: 6px 8px; background: var(--suave); border-left: 3px solid var(--primario);
+           font-weight: bold; font-size: 7.8pt; }
+  .alerta { margin-top: 8px; padding: 6px 8px; border: 1px solid var(--bad); color: var(--bad); border-radius: 4px; font-size: 7.6pt; }
+  .notas { padding: 5px 8px; }
+
+  /* ---------- Marca de agua: position: fixed se repite en todas las páginas ---------- */
+  .agua { position: fixed; top: 38%; left: 0; right: 0; text-align: center; font-size: 88pt; font-weight: bold;
+          color: var(--bad); opacity: .12; letter-spacing: 8px; transform: rotate(-30deg); }
+  .agua.borrador { color: var(--tenue); }
+</style>
+</head>
+<body>
+
+{# Encabezado corrido (se muestra a partir de la página 2) #}
+<div class="encabezado-corrido">
+  <span><b>Factura {{ f.serie_folio }}</b> · {{ f.emisor.nombre }}</span>
+  <span>{{ f.receptor.nombre }} · {{ f.fecha_emision|fecha }}</span>
+</div>
+
+{% if f.marca_agua %}<div class="agua {{ 'borrador' if f.borrador }}">{{ f.marca_agua }}</div>{% endif %}
+
+<!-- ============ ENCABEZADO ============ -->
+<section class="cabecera">
+  <div class="logo">
+    {% if f.logo_uri %}<img src="{{ f.logo_uri }}" alt="logo">
+    {% else %}<div class="monograma">{{ (f.emisor.nombre or '?')[:1] }}</div>{% endif %}
+  </div>
+  <div class="emisor">
+    <div class="razon">{{ f.emisor.nombre }}</div>
+    <div><span class="tenue">RFC:</span> <span class="b mono">{{ f.emisor.rfc }}</span></div>
+    <div><span class="tenue">Régimen fiscal:</span> {{ f.emisor.regimen_fiscal or '—' }}</div>
+    <div>{{ f.emisor_domicilio }}</div>
+    <div class="tenue peq">
+      {{ ['Tel. ' ~ f.emisor.telefono if f.emisor.telefono, f.emisor.email]|select|join(' · ') }}
+    </div>
+  </div>
+  <div class="comprobante">
+    <div class="tit">FACTURA</div>
+    <div class="folio">{{ f.serie_folio }}</div>
+    <div class="kv">
+      <span class="k">Tipo de comprobante</span><span>{{ f.tipo_comprobante }}</span>
+      <span class="k">Fecha de emisión</span><span>{{ f.fecha_emision|fecha }}{% if f.hora_emision %} {{ f.hora_emision.strftime('%H:%M:%S') }}{% endif %}</span>
+      <span class="k">Lugar de expedición</span><span>{{ f.lugar_expedicion or '—' }}</span>
+      <span class="k">Exportación</span><span>01 - No aplica</span>
+      <span class="k">Estatus</span><span><span class="estatus {{ f.clase_estatus }}">{{ f.estatus|upper }}</span></span>
+    </div>
+    <div class="uuid">
+      <div class="tenue peq">Folio fiscal (UUID)</div>
+      <div class="mono peq b">{{ f.uuid or 'Sin timbrar' }}</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RECEPTOR + CONDICIONES (grid) ============ -->
+<section class="fila">
+  <div class="panel">
+    <h2>Receptor</h2>
+    <div class="kv">
+      <span class="k">Nombre</span><span class="b">{{ f.receptor.nombre }}</span>
+      <span class="k">RFC</span><span class="mono b">{{ f.receptor.rfc or '—' }}</span>
+      <span class="k">Domicilio fiscal (C.P.)</span><span>{{ f.receptor.codigo_postal or '—' }}</span>
+      <span class="k">Uso CFDI</span><span>{{ f.uso_cfdi or '—' }}</span>
+      {% if f.receptor_domicilio %}<span class="k">Dirección</span><span>{{ f.receptor_domicilio }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Condiciones de pago</h2>
+    <div class="kv">
+      <span class="k">Moneda</span><span>{{ f.moneda }}</span>
+      <span class="k">Método de pago</span><span>{{ f.metodo_pago or '—' }}</span>
+      <span class="k">Forma de pago</span><span>{{ f.forma_pago or '—' }}</span>
+      <span class="k">Vencimiento</span><span>{{ f.fecha_vencimiento|fecha }}</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONCEPTOS: una sola tabla, el motor pagina ============ -->
+<h2 style="position:absolute; visibility:hidden">Conceptos</h2>
+<table class="conceptos">
+  <thead>
+    <tr>
+      <th style="width:6mm; text-align:center">#</th>
+      <th style="width:21mm">Clave</th>
+      <th>Descripción</th>
+      <th class="num" style="width:10mm">Cant.</th>
+      <th class="num" style="width:16mm">Valor unit.</th>
+      <th class="num" style="width:19mm">Importe</th>
+      <th class="num" style="width:16mm">Desc.</th>
+      <th style="width:15mm">Impuesto</th>
+      <th class="num" style="width:18mm">Imp. trasl.</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for l in f.lineas %}
+    <tr>
+      <td class="tenue" style="text-align:center">{{ l.n }}</td>
+      <td class="mono peq" style="white-space:nowrap">{{ l.codigo }}</td>
+      <td>
+        <div class="desc">{{ l.producto }}</div>
+        <div class="sub">{% if l.descripcion %}{{ l.descripcion }} · {% endif %}Obj. imp. {{ l.objeto_imp }} - {{ 'Sí objeto' if l.objeto_imp == '02' else 'No objeto' }}</div>
+      </td>
+      <td class="num">{{ l.cantidad|qty }}</td>
+      <td class="num">{{ l.precio|money }}</td>
+      <td class="num">{{ l.importe|money }}</td>
+      <td class="num">{{ l.descuento|money if l.descuento else '—' }}</td>
+      <td class="peq">{{ l.impuesto }}</td>
+      <td class="num">{{ l.impuesto_monto|money }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="tenue" style="text-align:center; padding:14px">La factura no tiene conceptos registrados.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- ============ IMPUESTOS + TOTALES ============ -->
+<section class="cierre">
+  <div class="fila">
+    <div>
+      <div class="panel">
+        <h2>Resumen de impuestos trasladados</h2>
+        <table class="imp">
+          <tr><th>Impuesto</th><th>Tipo factor</th><th class="num">Tasa o cuota</th><th class="num">Base</th><th class="num">Importe</th></tr>
+          {% for t in f.resumen_impuestos %}
+          <tr>
+            <td>{{ t.impuesto }}</td><td>{{ t.tipo_factor }}</td>
+            <td class="num">{{ t.tasa_cuota or '—' }}</td>
+            <td class="num">{{ t.base|money }}</td>
+            <td class="num">{{ t.importe|money if t.tipo_factor != 'Exento' else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="tenue">Sin impuestos.</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="letra">IMPORTE CON LETRA: {{ f.importe_letra }}</div>
+      {% if f.notas %}
+      <div class="panel" style="margin-top:9px">
+        <h2>Observaciones</h2>
+        <div class="notas">{{ f.notas }}</div>
+      </div>
+      {% endif %}
+    </div>
+    <div>
+      <div class="panel">
+        <table class="tot">
+          <tr><td>Subtotal</td><td class="num">{{ f.subtotal|money }}</td></tr>
+          <tr><td>Descuento</td><td class="num">{{ '-' if f.descuentos }}{{ f.descuentos|money }}</td></tr>
+          {% for t in f.impuestos_trasladados %}
+          <tr><td>{{ t.nombre_corto }} {{ '%g'|format(t.tasa) }}% trasladado</td><td class="num">{{ t.importe|money }}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>TOTAL {{ f.moneda }}</td><td class="num">${{ f.total|money }}</td></tr>
+          {% if f.muestra_saldo %}
+          <tr><td class="peq">Pagado{% if f.num_pagos %} ({{ f.num_pagos }} pago{{ 's' if f.num_pagos != 1 }}){% endif %}</td><td class="num peq">{{ f.pagado|money }}</td></tr>
+          <tr><td class="b">Saldo pendiente</td><td class="num b">{{ f.saldo|money }}</td></tr>
+          {% endif %}
+        </table>
+      </div>
+      <p class="tenue peq" style="text-align:right; margin:6px 2px 0">
+        Generado {{ f.generado.strftime('%d/%m/%Y %H:%M') }} · Ref. interna #{{ f.id }} · {{ motor.nombre }}
+      </p>
+    </div>
+  </div>
+
+  {% if f.descuadre %}
+  <div class="alerta">Atención: el total registrado ({{ f.total|money }}) no coincide con la suma de los conceptos ({{ f.total_calculado|money }}). Revise el detalle de la factura.</div>
+  {% endif %}
+  {% if f.folio_provisional %}
+  <div class="alerta">Folio provisional: la factura no tiene folio asignado; se muestra su identificador interno.</div>
+  {% endif %}
+</section>
+
+</body>
+</html>

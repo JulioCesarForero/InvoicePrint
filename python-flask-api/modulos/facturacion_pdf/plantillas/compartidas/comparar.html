@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparar motores · Factura {{ factura.serie_folio }}</title>
+<style>
+  :root { --primario:#1f4e79; --borde:#d5dce4; --suave:#f3f6f9; --texto:#1d2733; --tenue:#5b6878; --ok:#2e7d4f; --bad:#b3261e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif; color: var(--texto); background: #fff; }
+  header { padding: 16px 20px; border-bottom: 1px solid var(--borde); }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .tenue { color: var(--tenue); font-size: 13px; }
+  main { padding: 16px 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-bottom: 16px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--borde); text-align: left; vertical-align: top; }
+  th { background: var(--suave); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid; }
+  .pill.ok { color: var(--ok); border-color: var(--ok); }
+  .pill.bad { color: var(--bad); border-color: var(--bad); }
+  .mejor { font-weight: 700; color: var(--ok); }
+  .visores { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+  .visor { border: 1px solid var(--borde); border-radius: 6px; overflow: hidden; }
+  .visor h2 { margin: 0; padding: 8px 12px; font-size: 14px; background: var(--suave); border-bottom: 1px solid var(--borde);
+              display: flex; justify-content: space-between; align-items: center; }
+  .visor iframe { width: 100%; height: 78vh; border: 0; display: block; }
+  .visor .sin { padding: 30px; color: var(--bad); }
+  a { color: var(--primario); }
+  ul { margin: 6px 0 16px; padding-left: 20px; font-size: 13px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Comparación de motores PDF · Factura {{ factura.serie_folio }}</h1>
+  <div class="tenue">{{ factura.emisor.nombre }} → {{ factura.receptor.nombre }} · {{ factura.lineas|length }} partidas · Total {{ factura.moneda }} {{ factura.total|money }}</div>
+</header>
+<main>
+  {% set ok = resultados|selectattr('milisegundos', 'defined')|list %}
+  {% set mas_rapido = (ok|sort(attribute='milisegundos')|first).nombre if ok else None %}
+  {% set mas_ligero = (ok|sort(attribute='kb')|first).nombre if ok else None %}
+  <table>
+    <thead><tr><th>Motor</th><th>Estado</th><th>Versión / detalle</th><th class="num">Tiempo de generación</th><th class="num">Tamaño</th><th class="num">Páginas</th></tr></thead>
+    <tbody>
+    {% for r in resultados %}
+      <tr>
+        <td><b>{{ r.nombre }}</b>{% if r.por_defecto %} <span class="tenue">(por defecto)</span>{% endif %}<br><span class="tenue">{{ r.descripcion }}</span></td>
+        <td>{% if r.disponible and not r.error %}<span class="pill ok">Disponible</span>{% else %}<span class="pill bad">{{ 'Error' if r.error else 'No disponible' }}</span>{% endif %}</td>
+        <td class="tenue">{{ r.error or r.detalle }}</td>
+        <td class="num {{ 'mejor' if r.nombre == mas_rapido and ok|length > 1 }}">{{ (r.milisegundos ~ ' ms') if r.milisegundos is defined else '—' }}</td>
+        <td class="num {{ 'mejor' if r.nombre == mas_ligero and ok|length > 1 }}">{{ (r.kb ~ ' KB') if r.kb is defined else '—' }}</td>
+        <td class="num">{{ r.paginas if r.paginas is defined else '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="tenue">Qué observar al comparar:</div>
+  <ul>
+    <li><b>Paginación:</b> WeasyPrint repite el encabezado de la tabla y numera "Página X de Y"; la plantilla de wkhtmltopdf divide las partidas en el servidor y no puede numerar páginas en Linux.</li>
+    <li><b>Encabezado corrido:</b> en WeasyPrint las páginas 2+ llevan un encabezado con folio y receptor definido con <code>position: running()</code>.</li>
+    <li><b>Texto:</b> selecciona y copia texto en ambos PDF; revisa acentos, ñ y el espaciado de los números.</li>
+    <li><b>Metadatos:</b> en las propiedades del PDF de WeasyPrint aparecen título, autor y marcadores.</li>
+  </ul>
+
+  <div class="visores">
+  {% for r in resultados %}
+    <div class="visor">
+      <h2>{{ r.nombre }} {% if r.disponible and not r.error %}<a href="{{ url_pdf(r.nombre)|replace('inline=1', 'inline=0') }}">Descargar</a>{% endif %}</h2>
+      {% if r.disponible and not r.error %}
+        <iframe src="{{ url_pdf(r.nombre) }}" title="PDF generado con {{ r.nombre }}"></iframe>
+      {% else %}
+        <div class="sin">{{ r.error or r.detalle }}</div>
+      {% endif %}
+    </div>
+  {% endfor %}
+  </div>
+</main>
+</body>
+</html>

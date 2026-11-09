@@ -50,6 +50,7 @@ services:
     environment:
       DATABASE_URL: mssql+pyodbc://sa:${MSSQL_SA_PASSWORD}@db:1433/InvoicePrint?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes
       WKHTMLTOPDF_BIN_PATH: /usr/bin/wkhtmltopdf
+      PDF_MOTOR: ${PDF_MOTOR:-weasyprint}   # motor por defecto: weasyprint | wkhtmltopdf
       APP_DEBUG: ${APP_DEBUG:-false}
       SQLALCHEMY_ECHO: ${SQLALCHEMY_ECHO:-false}
       SITE_ADDR: http://localhost:${APP_PORT:-8050}

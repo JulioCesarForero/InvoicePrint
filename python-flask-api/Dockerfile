@@ -6,13 +6,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     QT_QPA_PLATFORM=offscreen
 
-# Driver ODBC 18 de SQL Server + wkhtmltopdf (exportación a PDF) + fuentes
+# Driver ODBC 18 de SQL Server + motores PDF: wkhtmltopdf y Pango (WeasyPrint) + fuentes
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl gnupg ca-certificates \
  && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
  && curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list -o /etc/apt/sources.list.d/mssql-release.list \
  && apt-get update \
  && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 unixodbc wkhtmltopdf fonts-dejavu-core \
+      libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 \
  && apt-get purge -y gnupg && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 

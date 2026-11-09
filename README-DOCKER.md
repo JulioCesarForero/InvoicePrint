@@ -75,6 +75,7 @@ Para crearla vacía, pon `SEED_DATA=false` en `.env` antes de levantarla.
 | `APP_PORT` / `API_PORT` / `DB_PORT` | `8050` / `8060` / `14333` | Puertos en el equipo anfitrión. |
 | `APP_DEBUG` | `false` | `true` muestra el detalle de errores en las respuestas de la API. |
 | `SQLALCHEMY_ECHO` | `false` | `true` registra cada SQL en los logs de la API. |
+| `PDF_MOTOR` | `weasyprint` | Motor PDF por defecto para imprimir facturas (`weasyprint` o `wkhtmltopdf`). |
 | `MSSQL_COLLATION` | `Modern_Spanish_CI_AS` | Intercalación del servidor (solo aplica al crear el volumen). |
 
 ## Archivos añadidos
@@ -104,8 +105,14 @@ Para una base fuera de Docker (SQL Server local), ejecuta el mismo archivo en SS
 
 ## Impresión de facturas
 
-- `GET /api/facturas/imprimir/<id>` → PDF (`factura-<serie>-<folio>.pdf`)
+La genera el módulo reutilizable `python-flask-api/modulos/facturacion_pdf` (ver su `README.md`), con dos motores: **WeasyPrint** (por defecto) y **wkhtmltopdf**. El motor por defecto se cambia con `PDF_MOTOR` en `.env`.
+
+- `GET /api/facturas/imprimir/<id>?motor=weasyprint|wkhtmltopdf` → PDF (`factura-<serie>-<folio>.pdf`)
 - `GET /api/facturas/imprimir/<id>?format=html` → vista previa en el navegador
+- `GET /api/facturas/imprimir/<id>/comparar` → ambos motores lado a lado con métricas
+- `GET /api/facturas/imprimir/motores` → estado de los motores
+
+Pruebas del módulo: `docker compose exec api python -m pytest modulos/facturacion_pdf/tests -v`
 
 ## Si cambias el esquema o los datos
 

@@ -65,7 +65,6 @@ from .controllers.impuestos import Impuestos_blueprint
 from .controllers.pagos import Pagos_blueprint
 from .controllers.productos import Productos_blueprint
 from .controllers.seriesfolios import SeriesFolios_blueprint
-from .controllers.factura_impresion import FacturaImpresion_blueprint
 
 
 # Page controller blueprint
@@ -75,7 +74,10 @@ app.register_blueprint(File_Uploader_blueprint, url_prefix = "/api/fileuploader"
 app.register_blueprint(Clientes_blueprint, url_prefix = "/api/clientes")
 app.register_blueprint(DetallesFactura_blueprint, url_prefix = "/api/detallesfactura")
 app.register_blueprint(Empresa_blueprint, url_prefix = "/api/empresa")
-app.register_blueprint(FacturaImpresion_blueprint, url_prefix = "/api/facturas")  # /api/facturas/imprimir/<id>
+# Módulo reutilizable de impresión de facturas (WeasyPrint / wkhtmltopdf): /api/facturas/imprimir/...
+from . import config as _config
+from .integraciones.facturacion_pdf import registrar as registrar_facturacion_pdf
+registrar_facturacion_pdf(app, db, _config)
 app.register_blueprint(Facturas_blueprint, url_prefix = "/api/facturas")
 app.register_blueprint(Impuestos_blueprint, url_prefix = "/api/impuestos")
 app.register_blueprint(Pagos_blueprint, url_prefix = "/api/pagos")

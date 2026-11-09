@@ -1,19 +1,25 @@
-import { Button } from 'primereact/button';
+import { SplitButton } from 'primereact/splitbutton';
 import useApi from 'hooks/useApi';
 import useApp from 'hooks/useApp';
 import useUtils from 'hooks/useUtils';
 
-// Impresión de la factura con el reporte propio (/api/facturas/imprimir/<id>).
+// Impresión de facturas con el módulo facturacion_pdf (/api/facturas/imprimir/...).
+// motor: 'weasyprint' | 'wkhtmltopdf' | undefined (usa el motor por defecto del servidor, PDF_MOTOR)
 // Componente propio: no lo genera RadSystems, así que no se pierde al regenerar.
 export function useImprimirFactura() {
 	const api = useApi();
 	const app = useApp();
 	const utils = useUtils();
 
-	async function descargarPdf(facturaId) {
-		app.showAppLoading("Generando factura...");
+	function ruta(facturaId, params = {}) {
+		const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+		return `facturas/imprimir/${facturaId}${qs ? `?${qs}` : ''}`;
+	}
+
+	async function descargarPdf(facturaId, motor) {
+		app.showAppLoading(`Generando factura${motor ? ` con ${motor}` : ''}...`);
 		try {
-			const response = await api.download(`facturas/imprimir/${facturaId}?format=pdf`);
+			const response = await api.download(ruta(facturaId, { format: 'pdf', motor }));
 			const disposition = response.headers?.['content-disposition'] || '';
 			const match = /filename="?([^";]+)"?/i.exec(disposition);
 			const fileName = match ? match[1] : `factura-${facturaId}.pdf`;
@@ -28,27 +34,38 @@ export function useImprimirFactura() {
 		}
 		catch (error) {
 			console.error(error);
-			app.flashMsg('Imprimir factura', 'No se pudo generar el PDF de la factura.', 'error');
+			let detalle = 'No se pudo generar el PDF de la factura.';
+			try { detalle = JSON.parse(await error?.response?.data?.text())?.error || detalle; } catch { /* respuesta no JSON */ }
+			app.flashMsg('Imprimir factura', detalle, 'error');
 		}
 		finally {
 			app.showAppLoading(false);
 		}
 	}
 
-	function vistaPrevia(facturaId) {
-		window.open(utils.setApiPath(`facturas/imprimir/${facturaId}`, { format: 'html' }), '_blank', 'noopener');
+	function abrir(path) {
+		window.open(utils.setApiPath(path), '_blank', 'noopener');
 	}
 
-	return { descargarPdf, vistaPrevia };
+	return {
+		descargarPdf,
+		vistaPrevia: (facturaId, motor) => abrir(ruta(facturaId, { format: 'html', motor })),
+		compararMotores: (facturaId) => abrir(`facturas/imprimir/${facturaId}/comparar`),
+	};
 }
 
 export function ImprimirFacturaButtons({ facturaId }) {
-	const { descargarPdf, vistaPrevia } = useImprimirFactura();
+	const { descargarPdf, vistaPrevia, compararMotores } = useImprimirFactura();
 	if (!facturaId) return null;
+	const opciones = [
+		{ label: 'PDF con WeasyPrint', icon: 'pi pi-file-pdf', command: () => descargarPdf(facturaId, 'weasyprint') },
+		{ label: 'PDF con wkhtmltopdf', icon: 'pi pi-file-pdf', command: () => descargarPdf(facturaId, 'wkhtmltopdf') },
+		{ separator: true },
+		{ label: 'Vista previa (HTML)', icon: 'pi pi-external-link', command: () => vistaPrevia(facturaId) },
+		{ label: 'Comparar motores', icon: 'pi pi-clone', command: () => compararMotores(facturaId) },
+	];
 	return (
-		<div className="flex gap-2">
-			<Button label="Imprimir factura" icon="pi pi-file-pdf" onClick={() => descargarPdf(facturaId)} tooltip="Descargar la factura en PDF" />
-			<Button label="Vista previa" icon="pi pi-external-link" className="p-button-outlined" onClick={() => vistaPrevia(facturaId)} tooltip="Abrir la factura en una pestaña nueva" />
-		</div>
+		<SplitButton label="Imprimir factura" icon="pi pi-file-pdf" model={opciones}
+			onClick={() => descargarPdf(facturaId)} tooltip="Descargar la factura en PDF (motor por defecto)" />
 	);
 }

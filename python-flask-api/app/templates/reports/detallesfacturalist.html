@@ -1,0 +1,34 @@
+{% extends "layouts/report.html" %}
+{% block content %}
+<div id="report-title"><h1>Detalles Factura</h1></div>
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Detalle Id</th>
+            <th>Factura Id</th>
+            <th>Producto Id</th>
+            <th>Cantidad</th>
+            <th>Precio Unitario</th>
+            <th>Descuento</th>
+            <th>Impuesto Id</th>
+            <th>Impuesto Monto</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['Detalle Id'] }}</td>
+            <td>{{ record['Factura Id'] }}</td>
+            <td>{{ record['Producto Id'] }}</td>
+            <td>{{ record['Cantidad'] }}</td>
+            <td>{{ record['Precio Unitario'] }}</td>
+            <td>{{ record['Descuento'] }}</td>
+            <td>{{ record['Impuesto Id'] }}</td>
+            <td>{{ record['Impuesto Monto'] }}</td>
+            <td>{{ record['Total'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

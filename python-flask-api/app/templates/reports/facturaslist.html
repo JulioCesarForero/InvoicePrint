@@ -1,0 +1,50 @@
+{% extends "layouts/report.html" %}
+{% block content %}
+<div id="report-title"><h1>Facturas</h1></div>
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Factura Id</th>
+            <th>Serie Folio Id</th>
+            <th>Cliente Id</th>
+            <th>Empresa Id</th>
+            <th>Fecha Emision</th>
+            <th>Fecha Vencimiento</th>
+            <th>Subtotal</th>
+            <th>Impuesto Total</th>
+            <th>Total</th>
+            <th>Moneda</th>
+            <th>Forma Pago</th>
+            <th>Metodo Pago</th>
+            <th>Uso Cfdi</th>
+            <th>Estatus</th>
+            <th>Notas</th>
+            <th>Uuid</th>
+            <th>Created At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['Factura Id'] }}</td>
+            <td>{{ record['Serie Folio Id'] }}</td>
+            <td>{{ record['Cliente Id'] }}</td>
+            <td>{{ record['Empresa Id'] }}</td>
+            <td>{{ record['Fecha Emision'] }}</td>
+            <td>{{ record['Fecha Vencimiento'] }}</td>
+            <td>{{ record['Subtotal'] }}</td>
+            <td>{{ record['Impuesto Total'] }}</td>
+            <td>{{ record['Total'] }}</td>
+            <td>{{ record['Moneda'] }}</td>
+            <td>{{ record['Forma Pago'] }}</td>
+            <td>{{ record['Metodo Pago'] }}</td>
+            <td>{{ record['Uso Cfdi'] }}</td>
+            <td>{{ record['Estatus'] }}</td>
+            <td>{{ record['Notas'] }}</td>
+            <td>{{ record['Uuid'] }}</td>
+            <td>{{ record['Created At'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

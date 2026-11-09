@@ -1,0 +1,209 @@
+
+import { Button } from 'primereact/button';
+import { ExportPageData } from 'components/ExportPageData';
+import { Menubar } from 'primereact/menubar';
+import { PageRequestError } from 'components/PageRequestError';
+import { ProgressSpinner } from 'primereact/progressspinner';
+import { Title } from 'components/Title';
+import EmpresaViewPage from 'pages/empresa/View';
+import SeriesfoliosEditPage from 'pages/seriesfolios/Edit';
+import useApp from 'hooks/useApp';
+import useUtils from 'hooks/useUtils';
+
+import useViewPage from 'hooks/useViewPage';
+import MasterDetailPages from './MasterDetailPages';
+const defaultProps = {
+	id: null,
+	primaryKey: 'serie_folio_id',
+	pageName: 'seriesfolios',
+	apiPath: 'seriesfolios/view',
+	routeName: 'seriesfoliosview',
+	msgBeforeDelete: "Are you sure you want to delete this record?",
+	msgTitle: "Delete record",
+	msgAfterDelete: "Record deleted successfully",
+	showHeader: true,
+	showFooter: true,
+	exportData: true,
+	isSubPage: false,
+}
+
+const SeriesfoliosViewPage = (componentProps ) => {
+
+	const props = {
+		...defaultProps,
+		...componentProps
+	}
+		const app = useApp();
+	const utils = useUtils();
+	const pageController = useViewPage(props);
+	const { item, currentRecord, pageReady, loading, apiUrl, apiRequestError, deleteItem } = pageController;
+	function ActionButton(data){
+		const items = [
+		{
+			label: "Edit",
+			command: (event) => { app.openPageDialog(<SeriesfoliosEditPage isSubPage apiPath={`/seriesfolios/edit/${data.serie_folio_id}`} />, {closeBtn: true }) },
+			icon: "pi pi-pencil"
+		},
+		{
+			label: "Delete",
+			command: (event) => { deleteItem(data.serie_folio_id) },
+			icon: "pi pi-trash"
+		}
+	]
+		return (<Menubar className="p-0 " model={items} />);
+	}
+	function ExportData() {
+		if (props.exportData) {
+			const downloadFileName = `${utils.dateNow()}-seriesfolios`;
+			return (
+				<ExportPageData print pageUrl={apiUrl} downloadFileName={downloadFileName} butonLabel="Export" tooltip="Export" buttonIcon="pi pi-print" />
+			);
+		}
+	}
+
+	function PageFooter() {
+		if (props.showFooter) {
+			return (
+				<div className="flex gap-3">
+					<ExportData />
+	<div className="flex ">
+	{ActionButton(item)}
+
+	</div>
+				</div>
+			);
+		}
+	}
+	if(loading){
+		return (
+			<div className="p-3 text-center">
+				<ProgressSpinner style={{width:'50px', height:'50px'}} />
+			</div>
+		);
+	}
+
+	if(apiRequestError){
+		return (
+			<PageRequestError error={apiRequestError} />
+		);
+	}
+
+	if(pageReady){
+		return (
+			<div>
+<main id="SeriesfoliosViewPage" className="main-page">
+    { (props.showHeader) && 
+    <section className="page-section mb-4" >
+        <div className="container-fluid">
+            <div className="flex flex-wrap gap-4 items-center gap-4">
+                { !props.isSubPage && 
+                <div className="md:col-span-4 " >
+                    <Button onClick={() => app.navigate(-1)} label=""  className="p-button p-button-text " icon="pi pi-arrow-left"  />
+                </div>
+                }
+                <div className="col-span-full " >
+                    <Title title="Series Folio Details"   titleClass="text-2xl text-primary font-bold" subTitleClass="text-gray-500" iconClass="pi pi-eye" avatarSize="large"    separator={false} />
+                </div>
+            </div>
+        </div>
+        <hr />
+    </section>
+    }
+    <section className="page-section mb-4" >
+        <div className="container-fluid">
+            <div className="grid grid-cols-12 gap-4">
+                <div className="col-span-full comp-grid" >
+                    <div >
+                        <div className="">
+                            <div className="col-span-full">
+                                {/*PageComponentStart*/}
+                                <div className="mb-3 grid grid-cols-12 gap-4">
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Serie Folio Id</div>
+                                                <div className="font-bold">{ item.serie_folio_id }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Serie</div>
+                                                <div className="font-bold">{ item.serie }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Folio Actual</div>
+                                                <div className="font-bold">{ item.folio_actual }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Folio Inicial</div>
+                                                <div className="font-bold">{ item.folio_inicial }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Folio Final</div>
+                                                <div className="font-bold">{ item.folio_final }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Tipo Comprobante</div>
+                                                <div className="font-bold">{ item.tipo_comprobante }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Activo</div>
+                                                <div className="font-bold">{ item.activo }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-full md:col-span-4">
+                                        <div className="flex gap-2 items-center card p-3 nice-shadow-2">
+                                            <div>
+                                                <div className="text-gray-600 mb-1">Empresa Id</div>
+                                                <div className="font-bold">{item.empresa_id && <Button className="p-button-text" icon="pi pi-eye" label="Empresa Detail" onClick={() => app.openPageDialog(<EmpresaViewPage isSubPage apiPath={`/empresa/view/${item.empresa_id}`} />, {closeBtn: true })} /> }</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/*PageComponentEnd*/}
+                            </div>
+                            {
+                            (currentRecord && !props.isSubPage) && 
+                            <div className="col-span-12">
+                                <div className="card my-3 p-1">
+                                    <MasterDetailPages masterRecord={currentRecord} scrollIntoView={false} />
+                                </div>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+				<PageFooter />
+			</div>
+		);
+	}
+}
+export default SeriesfoliosViewPage;

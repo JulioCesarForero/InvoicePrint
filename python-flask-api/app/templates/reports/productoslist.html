@@ -1,0 +1,30 @@
+{% extends "layouts/report.html" %}
+{% block content %}
+<div id="report-title"><h1>Productos</h1></div>
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Producto Id</th>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Descripcion</th>
+            <th>Precio Unitario</th>
+            <th>Impuesto Id</th>
+            <th>Activo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['Producto Id'] }}</td>
+            <td>{{ record['Codigo'] }}</td>
+            <td>{{ record['Nombre'] }}</td>
+            <td>{{ record['Descripcion'] }}</td>
+            <td>{{ record['Precio Unitario'] }}</td>
+            <td>{{ record['Impuesto Id'] }}</td>
+            <td>{{ record['Activo'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

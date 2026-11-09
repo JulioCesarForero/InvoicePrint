@@ -1,0 +1,34 @@
+@import 'primeicons/primeicons.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// reset grid columns when placed inside dialog or drawer
+.p-dialog .grid .comp-grid,
+.p-drawer .grid .comp-grid {
+  grid-column: 1 / -1;
+}
+
+.img-fluid {
+  max-width: 100%;
+}
+
+#master-detailpage {
+  scroll-margin-top: 10px;
+}
+
+.search-result-holder {
+  max-width: 90%;
+  position: absolute;
+  z-index: 10000;
+  width: 360px;
+  background-color: var(--surface-card);
+}
+
+.search-result-holder .result-list {
+  max-height: 400px;
+  overflow: auto;
+}
+body{
+	
+}

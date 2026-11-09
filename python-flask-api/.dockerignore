@@ -1,0 +1,9 @@
+venv/
+.venv/
+**/__pycache__/
+**/*.pyc
+app/static/reports/*.pdf
+app/static/uploads/
+.git/
+Dockerfile
+.dockerignore

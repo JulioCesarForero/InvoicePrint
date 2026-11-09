@@ -1,0 +1,32 @@
+{% extends "layouts/report.html" %}
+{% block content %}
+<div id="report-title"><h1>Pagos</h1></div>
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Pago Id</th>
+            <th>Factura Id</th>
+            <th>Monto</th>
+            <th>Fecha Pago</th>
+            <th>Forma Pago</th>
+            <th>Referencia</th>
+            <th>Notas</th>
+            <th>Created At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['Pago Id'] }}</td>
+            <td>{{ record['Factura Id'] }}</td>
+            <td>{{ record['Monto'] }}</td>
+            <td>{{ record['Fecha Pago'] }}</td>
+            <td>{{ record['Forma Pago'] }}</td>
+            <td>{{ record['Referencia'] }}</td>
+            <td>{{ record['Notas'] }}</td>
+            <td>{{ record['Created At'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

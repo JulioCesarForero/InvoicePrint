@@ -1,0 +1,32 @@
+{% extends "layouts/report.html" %}
+{% block content %}
+<div id="report-title"><h1>Series Folio Details</h1></div>
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Serie Folio Id</th>
+            <th>Serie</th>
+            <th>Folio Actual</th>
+            <th>Folio Inicial</th>
+            <th>Folio Final</th>
+            <th>Tipo Comprobante</th>
+            <th>Activo</th>
+            <th>Empresa Id</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['Serie Folio Id'] }}</td>
+            <td>{{ record['Serie'] }}</td>
+            <td>{{ record['Folio Actual'] }}</td>
+            <td>{{ record['Folio Inicial'] }}</td>
+            <td>{{ record['Folio Final'] }}</td>
+            <td>{{ record['Tipo Comprobante'] }}</td>
+            <td>{{ record['Activo'] }}</td>
+            <td>{{ record['Empresa Id'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

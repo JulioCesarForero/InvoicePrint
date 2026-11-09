@@ -1,0 +1,78 @@
+# InvoicePrint: SQL Server + API Flask + Frontend React (nginx)
+# Uso:  docker compose up -d --build      ->  http://localhost:8050
+name: invoiceprint
+
+services:
+
+  # ---------------- Capa de datos ----------------
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64            # SQL Server solo existe para amd64 (en Mac Apple Silicon corre emulado)
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Define MSSQL_SA_PASSWORD en el archivo .env}
+      MSSQL_COLLATION: ${MSSQL_COLLATION:-Modern_Spanish_CI_AS}
+    ports:
+      - "${DB_PORT:-14333}:1433"     # para conectarte con SSMS / Azure Data Studio: localhost,14333
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  # Crea el esquema y carga los datos sintéticos solo la primera vez
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      SEED_DATA: ${SEED_DATA:-true}
+      DB_HOST: db
+    volumes:
+      - ./docker/db:/init:ro
+    entrypoint: ["/bin/bash", "/init/init-db.sh"]
+    restart: "no"
+
+  # ---------------- Backend ----------------
+  api:
+    build: ./python-flask-api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mssql+pyodbc://sa:${MSSQL_SA_PASSWORD}@db:1433/InvoicePrint?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes
+      WKHTMLTOPDF_BIN_PATH: /usr/bin/wkhtmltopdf
+      APP_DEBUG: ${APP_DEBUG:-false}
+      SQLALCHEMY_ECHO: ${SQLALCHEMY_ECHO:-false}
+      SITE_ADDR: http://localhost:${APP_PORT:-8050}
+      FRONTEND_ADDR: http://localhost:${APP_PORT:-8050}
+    ports:
+      - "${API_PORT:-8060}:8060"     # opcional: acceso directo a la API (el frontend usa /api/ vía nginx)
+    volumes:
+      - api_uploads:/app/app/static/uploads
+    restart: unless-stopped
+
+  # ---------------- Frontend ----------------
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_APP_NAME: InvoicePrint
+        VITE_LOCALE: ${APP_LOCALE:-en-US}
+    depends_on:
+      - api
+    ports:
+      - "${APP_PORT:-8050}:80"
+    restart: unless-stopped
+
+volumes:
+  mssql_data:
+  api_uploads:

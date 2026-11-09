@@ -1,0 +1,42 @@
+{% extends "layouts/report.html" %}
+{% block content %}
+<div id="report-title"><h1>Cliente Details</h1></div>
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Cliente Id</th>
+            <th>Title</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Rfc</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>City</th>
+            <th>State</th>
+            <th>Country</th>
+            <th>Zipcode</th>
+            <th>Created At</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['Cliente Id'] }}</td>
+            <td>{{ record['Title'] }}</td>
+            <td>{{ record['First Name'] }}</td>
+            <td>{{ record['Last Name'] }}</td>
+            <td>{{ record['Rfc'] }}</td>
+            <td>{{ record['Email'] }}</td>
+            <td>{{ record['Phone'] }}</td>
+            <td>{{ record['Address'] }}</td>
+            <td>{{ record['City'] }}</td>
+            <td>{{ record['State'] }}</td>
+            <td>{{ record['Country'] }}</td>
+            <td>{{ record['Zipcode'] }}</td>
+            <td>{{ record['Created At'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
